@@ -52,7 +52,7 @@ class DeepSeekClient:
         self,
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
-        model: str = "deepseek-chat",
+        model: str = "deepseek/deepseek-chat",
         timeout: int = 60,
         max_retries: int = 3,
         retry_delay: float = 1.0,
@@ -89,9 +89,8 @@ class DeepSeekClient:
     def _prepare_model_name(self, model: Optional[str] = None) -> str:
         """Prepare model name for LiteLLM."""
         model_name = model or self.model
-        # Try without deepseek/ prefix first (as per our debugging)
-        # if not model_name.startswith("deepseek/"):
-        #     model_name = f"deepseek/{model_name}"
+        if not model_name.startswith("deepseek/"):
+            model_name = f"deepseek/{model_name}"
         return model_name
 
     def _create_error_response(self, error_message: str) -> Any:
@@ -105,6 +104,7 @@ class DeepSeekClient:
         for attempt in range(self.max_retries + 1):
             try:
                 result = func(*args, **kwargs)
+                print("DEBUG: Raw result from completion:", result)
 
                 # Validate that we got a proper response
                 if result is None:
@@ -271,16 +271,17 @@ class DeepSeekClient:
     def get_available_models(self) -> List[str]:
         """Get list of available DeepSeek models."""
         return [
-            "deepseek-chat",
-            "deepseek-reasoner",
-            "deepseek-coder"
+            "deepseek/deepseek-chat",
+            "deepseek/deepseek-reasoner",
+            "deepseek/deepseek-coder"
         ]
 
     def validate_model(self, model: str) -> bool:
         """Validate if model is available."""
         available_models = self.get_available_models()
+        # Also check without prefix for backward compatibility
         clean_model = model.replace("deepseek/", "")
-        return clean_model in available_models
+        return model in available_models or f"deepseek/{clean_model}" in available_models
 
     def get_model_info(self, model: Optional[str] = None) -> Dict[str, Any]:
         """Get information about a specific model."""
