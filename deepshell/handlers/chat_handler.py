@@ -1,135 +1,97 @@
-"""
-Chat handler for persistent conversation sessions.
-
-Manages conversation history, session persistence, and multi-turn interactions.
-"""
-
-import json
-import time
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-
-from rich.console import Console
-from rich.panel import Panel
-from rich.table import Table
-
-from .base_handler import BaseHandler
-from ..config import config
-from ..persona import Persona
-
-console = Console()
-
-
 class ChatSession:
-    # ... (no changes needed in ChatSession, so keep as is)
-    # Paste your existing ChatSession class here
-
-
-class ChatHandler(BaseHandler):
     """
-    Handler for persistent chat conversations.
+    Manages a persistent chat session with message history.
 
-    Manages conversation sessions with history persistence and
-    multi-turn interactions.
+    Handles message storage, retrieval, and truncation to stay within
+    context limits while preserving conversation continuity.
     """
 
-    def __init__(self, session_id: str, persona: Persona, markdown: bool = True) -> None:
-        """
-        Initialize chat handler.
+    def __init__(self, session_id: str, max_length: int = 100) -> None:
+        self.session_id = session_id
+        self.max_length = max_length
+        self.is_temp = session_id == "temp"
 
-        Args:
-            session_id: Chat session identifier
-            persona: AI persona to use
-            markdown: Whether to enable markdown formatting
-        """
-        super().__init__(persona, markdown)
+        # Session file path
+        if not self.is_temp:
+            cache_dir = Path(config.get("CHAT_CACHE_PATH"))
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            self.session_file = cache_dir / f"{session_id}.json"
+        else:
+            self.session_file = None
 
-        self.session = ChatSession(
-            session_id=session_id,
-            max_length=config.get("CHAT_CACHE_LENGTH")
-        )
+        # Load existing messages
+        self.messages: List[Dict[str, Any]] = []
+        if not self.is_temp and self.session_file and self.session_file.exists():
+            self._load_messages()
 
-        # Add system message if this is a new session
-        if not self.session.messages:
-            self.session.add_message("system", self.persona.system_prompt)
+    def _load_messages(self) -> None:
+        try:
+            with open(self.session_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                self.messages = data.get("messages", [])
+        except (json.JSONDecodeError, IOError) as e:
+            console.print(f"[yellow]Warning: Could not load session {self.session_id}: {e}[/yellow]")
+            self.messages = []
 
-    def make_messages(self, prompt: str) -> List[Dict[str, str]]:
-        """
-        Create message list including conversation history.
-
-        Args:
-            prompt: User prompt
-
-        Returns:
-            List of messages including history and new prompt
-        """
-        # Add user message to session
-        self.session.add_message("user", prompt)
-
-        # Return all messages for API call
-        return self.session.get_messages()
-
-    def handle(self, prompt: str, **options) -> None:
-        """
-        Handle chat interaction with history.
-
-        Args:
-            prompt: User prompt to process
-            **options: Handler options (model, temperature, etc.)
-        """
-        if not prompt.strip():
-            console.print("[red]Error: Empty prompt provided[/red]")
+    def _save_messages(self) -> None:
+        if self.is_temp or not self.session_file:
             return
 
         try:
-            # Validate options
-            validated_options = self.validate_options(**options)
+            session_data = {
+                "session_id": self.session_id,
+                "created_at": time.time(),
+                "messages": self.messages
+            }
 
-            # Create messages with history
-            messages = self.make_messages(prompt)
+            with open(self.session_file, 'w', encoding='utf-8') as f:
+                json.dump(session_data, f, indent=2, ensure_ascii=False)
 
-            # Get response
-            if validated_options["stream"]:
-                # Streaming response
-                response_generator = self.get_completion(
-                    messages=messages,
-                    **validated_options
-                )
+        except IOError as e:
+            console.print(f"[yellow]Warning: Could not save session {self.session_id}: {e}[/yellow]")
 
-                full_response = self.stream_response(response_generator)
+    def add_message(self, role: str, content: str) -> None:
+        message = {
+            "role": role,
+            "content": content,
+            "timestamp": time.time()
+        }
 
-                # Add assistant response to session
-                self.session.add_message("assistant", full_response)
+        self.messages.append(message)
+        self._truncate_messages()
+        self._save_messages()
 
-            else:
-                # Non-streaming response
-                response = self.get_completion(
-                    messages=messages,
-                    **validated_options
-                )
+    def _truncate_messages(self) -> None:
+        if len(self.messages) <= self.max_length:
+            return
 
-                # Defensive: check for response structure
-                if not response or not hasattr(response, 'choices') or not response.choices:
-                    console.print("[red]Error: Invalid response from LLM[/red]")
-                    return
-                if not hasattr(response.choices[0], 'message') or not response.choices[0].message:
-                    console.print("[red]Error: Invalid message in response[/red]")
-                    return
-                if not hasattr(response.choices[0].message, 'content'):
-                    console.print("[red]Error: No content in response message[/red]")
-                    return
+        # Keep the first message (usually system prompt) and recent messages
+        if self.messages and self.messages[0]["role"] == "system":
+            system_message = self.messages[0]
+            recent_messages = self.messages[-(self.max_length - 1):]
+            self.messages = [system_message] + recent_messages
+        else:
+            self.messages = self.messages[-self.max_length:]
 
-                content = response.choices[0].message.content
-                self.print_response(content)
+    def get_messages(self) -> List[Dict[str, str]]:
+        return [
+            {"role": msg["role"], "content": msg["content"]}
+            for msg in self.messages
+        ]
 
-                # Add assistant response to session
-                self.session.add_message("assistant", content)
+    def clear(self) -> None:
+        self.messages = []
+        if not self.is_temp and self.session_file and self.session_file.exists():
+            try:
+                self.session_file.unlink()
+            except OSError as e:
+                console.print(f"[yellow]Warning: Could not delete session file: {e}[/yellow]")
 
-        except KeyboardInterrupt:
-            console.print("\n[yellow]Operation cancelled by user[/yellow]")
-
-        except Exception as e:
-            self.handle_error(e)
-
-    # ... (rest of ChatHandler unchanged)
-    # Paste your existing static methods (list_sessions, show_session, delete_session) here
+    def get_summary(self) -> Dict[str, Any]:
+        return {
+            "session_id": self.session_id,
+            "is_temp": self.is_temp,
+            "message_count": len(self.messages),
+            "max_length": self.max_length,
+            "file_path": str(self.session_file) if self.session_file else None,
+        }
