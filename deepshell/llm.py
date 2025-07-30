@@ -11,6 +11,7 @@ import time
 from typing import Any, Dict, Generator, List, Optional, Union
 
 import litellm
+
 from litellm import completion
 from rich.console import Console
 
@@ -88,11 +89,9 @@ class DeepSeekClient:
     def _prepare_model_name(self, model: Optional[str] = None) -> str:
         """Prepare model name for LiteLLM."""
         model_name = model or self.model
-
         # Try without deepseek/ prefix first (as per our debugging)
         # if not model_name.startswith("deepseek/"):
         #     model_name = f"deepseek/{model_name}"
-
         return model_name
 
     def _create_error_response(self, error_message: str) -> Any:
@@ -106,23 +105,23 @@ class DeepSeekClient:
         for attempt in range(self.max_retries + 1):
             try:
                 result = func(*args, **kwargs)
-                
+
                 # Validate that we got a proper response
                 if result is None:
                     raise ValueError("API returned None response")
-                
+
                 if isinstance(result, bool):
                     raise ValueError(f"API returned boolean: {result}")
-                
+
                 # Check if it has the expected structure for non-streaming
                 if not kwargs.get('stream', False):
                     if not hasattr(result, 'choices'):
                         raise ValueError("API response missing 'choices' attribute")
                     if not result.choices:
                         raise ValueError("API response has empty choices")
-                
+
                 return result
-                
+
             except Exception as e:
                 last_exception = e
                 console.print(f"DEBUG: Exception in attempt {attempt + 1}: {str(e)}")
@@ -166,6 +165,7 @@ class DeepSeekClient:
         Returns:
             Completion response or generator for streaming
         """
+        print("DEBUG: Using API key:", self.api_key)
         model_name = self._prepare_model_name(model)
 
         # Prepare completion parameters
@@ -252,16 +252,16 @@ class DeepSeekClient:
                 # Defensive check for response structure
                 if not response or not hasattr(response, 'choices'):
                     return self._create_error_response("Invalid API response structure")
-                
+
                 if not response.choices:
                     return self._create_error_response("Empty choices in API response")
-                
+
                 if not hasattr(response.choices[0], 'message'):
                     return self._create_error_response("Invalid message structure in API response")
-                
+
                 if not hasattr(response.choices[0].message, 'content'):
                     return self._create_error_response("No content in API response message")
-                
+
                 return response
 
         except Exception as e:
@@ -330,16 +330,16 @@ class DeepSeekClient:
                 messages=[{"role": "user", "content": "Hello"}],
                 max_tokens=10
             )
-            
+
             # Defensive check
             if not response or not hasattr(response, 'choices') or not response.choices:
                 return False
-            
+
             if not hasattr(response.choices[0], 'message') or not response.choices[0].message:
                 return False
-                
+
             return bool(response.choices[0].message.content)
-            
+
         except Exception as e:
             console.print(f"[red]Connection test failed: {str(e)}[/red]")
             return False
