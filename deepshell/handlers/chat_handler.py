@@ -1,3 +1,21 @@
+"""
+Chat handler for persistent conversation sessions.
+
+Manages conversation history, session persistence, and multi-turn interactions.
+"""
+
+import json
+import time
+from pathlib import Path
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+
+from .base_handler import BaseHandler
+from ..config import config
+from ..persona import Persona
+
+console = Console()
 class ChatSession:
     """
     Manages a persistent chat session with message history.
