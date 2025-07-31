@@ -1,4 +1,3 @@
-
 """
 Main CLI application for DeepShell.
 
@@ -29,7 +28,7 @@ from .utils import (
 
 app = typer.Typer(
     name="deepshell",
-    help="A command-line productivity tool powered by DeepSeek LLM",
+    help="A command-line productivity tool powered by OpenAI, Gemini, and DeepSeek LLMs",
     add_completion=False,
     rich_markup_mode="rich",
 )
@@ -44,11 +43,16 @@ def main(
         show_default=False,
         help="The prompt to generate completions for.",
     ),
+    provider: str = typer.Option(
+        config.get("PROVIDER", "openai"),
+        "--provider",
+        help="LLM provider to use (openai, gemini, deepseek).",
+    ),
     model: str = typer.Option(
         config.get("DEFAULT_MODEL"),
         "--model",
         "-m",
-        help="DeepSeek model to use (deepseek-chat, deepseek-reasoner, deepseek-coder).",
+        help="Model to use (e.g., gpt-3.5-turbo, gemini-1.5-pro, deepseek-chat).",
     ),
     temperature: float = typer.Option(
         0.0,
@@ -174,63 +178,63 @@ def main(
     ),
 ) -> None:
     """
-    DeepShell - AI-powered command-line assistant using DeepSeek LLM.
-    
+    DeepShell - AI-powered command-line assistant using OpenAI, Gemini, or DeepSeek LLM.
+
     Examples:
-        deepshell "list all files in current directory"
-        deepshell --shell "find large files"
-        deepshell --chat mysession "explain this code" < script.py
+        deepshell --provider openai "list all files in current directory"
+        deepshell --provider gemini --shell "find large files"
+        deepshell --provider deepseek --chat mysession "explain this code" < script.py
         deepshell --repl coding
         deepshell --persona shell-expert "optimize this command"
     """
-    
+
     # Handle version flag
     if version:
         from . import __version__
         console.print(f"DeepShell version {__version__}")
         return
-    
+
     # Handle installation
     if install_integration:
         install_shell_integration()
         return
-    
+
     # Handle persona management
     if create_persona_name:
         create_persona(create_persona_name)
         return
-    
+
     if show_persona_name:
         show_persona(show_persona_name)
         return
-    
+
     if list_personas_flag:
         list_personas()
         return
-    
+
     # Handle chat management
     if list_chats:
         ChatHandler.list_sessions()
         return
-    
+
     if show_chat:
         ChatHandler.show_session(show_chat)
         return
-    
+
     # Validate mutually exclusive options
     mode_options = [shell, describe_shell, code]
     if sum(mode_options) > 1:
         console.print("[red]Error: --shell, --describe-shell, and --code are mutually exclusive[/red]")
         raise typer.Exit(1)
-    
+
     # Handle input sources
     stdin_content = ""
     if detect_stdin():
         stdin_content = sys.stdin.read().strip()
-    
+
     if editor and not prompt and not stdin_content:
         prompt = get_edited_prompt()
-    
+
     # Combine prompt sources
     full_prompt = ""
     if stdin_content:
@@ -239,11 +243,11 @@ def main(
             full_prompt += f"\n\n{prompt}"
     else:
         full_prompt = prompt
-    
+
     if not full_prompt and not repl:
         console.print("[red]Error: No prompt provided. Use --help for usage information.[/red]")
         raise typer.Exit(1)
-    
+
     # Determine persona
     if shell:
         persona_obj = get_persona("shell")
@@ -255,9 +259,10 @@ def main(
         persona_obj = get_persona(persona)
     else:
         persona_obj = get_persona("default")
-    
+
     # Create handler options
     handler_options = {
+        "provider": provider,
         "model": model,
         "temperature": temperature,
         "top_p": top_p,
@@ -267,7 +272,7 @@ def main(
         "functions": functions,
         "interactive": interactive and shell,
     }
-    
+
     # Route to appropriate handler
     try:
         if repl:
@@ -279,7 +284,7 @@ def main(
         else:
             handler = DefaultHandler(persona_obj, markdown)
             handler.handle(full_prompt, **handler_options)
-    
+
     except KeyboardInterrupt:
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
         raise typer.Exit(130)

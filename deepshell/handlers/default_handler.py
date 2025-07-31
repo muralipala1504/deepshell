@@ -10,6 +10,7 @@ from rich.console import Console
 
 from .base_handler import BaseHandler
 from ..persona import Persona
+from ..llm import get_global_client  # <-- Import the new client getter
 
 console = Console()
 
@@ -49,12 +50,20 @@ class DefaultHandler(BaseHandler):
 
         return messages
 
-    def handle(self, prompt: str, **options) -> None:
+    def get_completion(self, messages, provider=None, **options):
+        """
+        Get completion from the selected LLM provider.
+        """
+        client = get_global_client(provider)
+        return client.complete(messages, **options)
+
+    def handle(self, prompt: str, provider=None, **options) -> None:
         """
         Handle single prompt/response interaction.
 
         Args:
             prompt: User prompt to process
+            provider: LLM provider to use (openai, gemini, deepseek)
             **options: Handler options (model, temperature, etc.)
         """
         if not prompt.strip():
@@ -73,6 +82,7 @@ class DefaultHandler(BaseHandler):
                 # Streaming response
                 response_generator = self.get_completion(
                     messages=messages,
+                    provider=provider,
                     **validated_options
                 )
 
@@ -86,6 +96,7 @@ class DefaultHandler(BaseHandler):
                 # Non-streaming response
                 response = self.get_completion(
                     messages=messages,
+                    provider=provider,
                     **validated_options
                 )
 

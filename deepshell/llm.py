@@ -1,17 +1,17 @@
 """
-DeepSeek LLM client integration using LiteLLM.
+Multi-provider LLM client integration using LiteLLM.
 
-This module provides a unified interface for interacting with DeepSeek's
-language models through LiteLLM, with fallback to direct OpenAI SDK usage.
+This module provides a unified interface for interacting with multiple
+language model providers: OpenAI, Gemini, and DeepSeek.
 """
 
 import json
 import os
 import time
 from typing import Any, Dict, Generator, List, Optional, Union
+from abc import ABC, abstractmethod
 
 import litellm
-
 from litellm import completion
 from rich.console import Console
 
@@ -40,59 +40,30 @@ class MockMessage:
         self.content = content
 
 
-class DeepSeekClient:
-    """
-    DeepSeek LLM client with streaming support and error handling.
-
-    Uses LiteLLM for unified API access with automatic retries and
-    comprehensive error handling.
-    """
-
-    def __init__(
-        self,
-        api_key: Optional[str] = None,
-        base_url: Optional[str] = None,
-        model: str = "deepseek/deepseek-chat",
-        timeout: int = 60,
-        max_retries: int = 3,
-        retry_delay: float = 1.0,
-    ) -> None:
-        """
-        Initialize DeepSeek client.
-
-        Args:
-            api_key: DeepSeek API key (defaults to config/env)
-            base_url: API base URL (defaults to config)
-            model: Default model to use
-            timeout: Request timeout in seconds
-            max_retries: Maximum retry attempts
-            retry_delay: Base delay between retries
-        """
-        self.api_key = api_key or config.get("DEEPSEEK_API_KEY")
-        self.base_url = base_url or config.get("API_BASE_URL")
-        self.model = model
+class BaseLLMClient(ABC):
+    """Base class for all LLM clients."""
+    
+    def __init__(self, api_key: Optional[str] = None, timeout: int = 60, max_retries: int = 3):
+        self.api_key = api_key
         self.timeout = timeout
         self.max_retries = max_retries
-        self.retry_delay = retry_delay
-
-        # Set environment variables for LiteLLM
-        if self.api_key:
-            os.environ["DEEPSEEK_API_KEY"] = self.api_key
-
-        # Validate configuration
-        if not self.api_key:
-            raise ValueError(
-                "DeepSeek API key is required. Set DEEPSEEK_API_KEY environment "
-                "variable or provide api_key parameter."
-            )
-
-    def _prepare_model_name(self, model: Optional[str] = None) -> str:
-        """Prepare model name for LiteLLM."""
-        model_name = model or self.model
-        if not model_name.startswith("deepseek/"):
-            model_name = f"deepseek/{model_name}"
-        return model_name
-
+        self.retry_delay = 1.0
+    
+    @abstractmethod
+    def get_model_prefix(self) -> str:
+        """Get the model prefix for this provider."""
+        pass
+    
+    @abstractmethod
+    def get_available_models(self) -> List[str]:
+        """Get list of available models for this provider."""
+        pass
+    
+    @abstractmethod
+    def get_default_model(self) -> str:
+        """Get the default model for this provider."""
+        pass
+    
     def _create_error_response(self, error_message: str) -> Any:
         """Create a mock response object for error cases."""
         return MockResponse(f"❌ Error: {error_message}")
@@ -104,8 +75,7 @@ class DeepSeekClient:
         for attempt in range(self.max_retries + 1):
             try:
                 result = func(*args, **kwargs)
-                print("DEBUG: Raw result from completion:", result)
-
+                
                 # Validate that we got a proper response
                 if result is None:
                     raise ValueError("API returned None response")
@@ -149,25 +119,9 @@ class DeepSeekClient:
         functions: Optional[List[Dict[str, Any]]] = None,
         **kwargs
     ) -> Union[Any, Generator[str, None, None]]:
-        """
-        Generate completion from DeepSeek model.
-
-        Args:
-            messages: List of message dictionaries
-            model: Model to use (defaults to instance default)
-            temperature: Sampling temperature (0.0-2.0)
-            top_p: Nucleus sampling parameter (0.0-1.0)
-            max_tokens: Maximum tokens to generate
-            stream: Whether to stream the response
-            functions: Function definitions for function calling
-            **kwargs: Additional parameters
-
-        Returns:
-            Completion response or generator for streaming
-        """
-        print("DEBUG: Using API key:", self.api_key)
-        model_name = self._prepare_model_name(model)
-
+        """Generate completion from the LLM."""
+        model_name = model or self.get_default_model()
+        
         # Prepare completion parameters
         completion_kwargs = {
             "model": model_name,
@@ -190,9 +144,6 @@ class DeepSeekClient:
                 {"type": "function", "function": func} for func in functions
             ]
             completion_kwargs["tool_choice"] = "auto"
-
-        console.print(f"DEBUG: Using model: {model_name}")
-        console.print(f"DEBUG: completion_kwargs: {completion_kwargs}")
 
         if stream:
             return self._stream_completion(**completion_kwargs)
@@ -225,17 +176,7 @@ class DeepSeekClient:
         system_message: Optional[str] = None,
         **kwargs
     ) -> Union[str, Generator[str, None, None]]:
-        """
-        Simple chat interface.
-
-        Args:
-            prompt: User prompt
-            system_message: Optional system message
-            **kwargs: Additional completion parameters
-
-        Returns:
-            Response string or generator for streaming
-        """
+        """Simple chat interface."""
         messages = []
 
         if system_message:
@@ -268,64 +209,8 @@ class DeepSeekClient:
             console.print(f"[red]Chat error: {str(e)}[/red]")
             return self._create_error_response(f"Chat failed: {str(e)}")
 
-    def get_available_models(self) -> List[str]:
-        """Get list of available DeepSeek models."""
-        return [
-            "deepseek/deepseek-chat",
-            "deepseek/deepseek-reasoner",
-            "deepseek/deepseek-coder"
-        ]
-
-    def validate_model(self, model: str) -> bool:
-        """Validate if model is available."""
-        available_models = self.get_available_models()
-        # Also check without prefix for backward compatibility
-        clean_model = model.replace("deepseek/", "")
-        return model in available_models or f"deepseek/{clean_model}" in available_models
-
-    def get_model_info(self, model: Optional[str] = None) -> Dict[str, Any]:
-        """Get information about a specific model."""
-        model_name = model or self.model
-        clean_model = model_name.replace("deepseek/", "")
-
-        model_info = {
-            "deepseek-chat": {
-                "name": "DeepSeek Chat",
-                "description": "General conversation and assistance",
-                "context_length": 64000,
-                "max_output": 8000,
-                "supports_functions": True,
-                "supports_reasoning": False,
-            },
-            "deepseek-reasoner": {
-                "name": "DeepSeek Reasoner",
-                "description": "Chain-of-thought reasoning model",
-                "context_length": 64000,
-                "max_output": 64000,
-                "supports_functions": True,
-                "supports_reasoning": True,
-            },
-            "deepseek-coder": {
-                "name": "DeepSeek Coder",
-                "description": "Code generation and programming assistance",
-                "context_length": 64000,
-                "max_output": 8000,
-                "supports_functions": True,
-                "supports_reasoning": False,
-            }
-        }
-
-        return model_info.get(clean_model, {
-            "name": "Unknown Model",
-            "description": "Model information not available",
-            "context_length": 0,
-            "max_output": 0,
-            "supports_functions": False,
-            "supports_reasoning": False,
-        })
-
     def test_connection(self) -> bool:
-        """Test connection to DeepSeek API."""
+        """Test connection to the API."""
         try:
             response = self.complete(
                 messages=[{"role": "user", "content": "Hello"}],
@@ -346,26 +231,152 @@ class DeepSeekClient:
             return False
 
 
+class OpenAIClient(BaseLLMClient):
+    """OpenAI LLM client."""
+    
+    def __init__(self, api_key: Optional[str] = None, **kwargs):
+        super().__init__(api_key, **kwargs)
+        self.api_key = api_key or config.get("OPENAI_API_KEY")
+        
+        if self.api_key:
+            os.environ["OPENAI_API_KEY"] = self.api_key
+        
+        if not self.api_key:
+            raise ValueError(
+                "OpenAI API key is required. Set OPENAI_API_KEY environment "
+                "variable or provide api_key parameter."
+            )
+    
+    def get_model_prefix(self) -> str:
+        return "openai/"
+    
+    def get_available_models(self) -> List[str]:
+        return [
+            "gpt-3.5-turbo",
+            "gpt-4",
+            "gpt-4-turbo",
+            "gpt-4o",
+            "gpt-4o-mini"
+        ]
+    
+    def get_default_model(self) -> str:
+        return "gpt-3.5-turbo"
+
+
+class GeminiClient(BaseLLMClient):
+    """Google Gemini LLM client."""
+    
+    def __init__(self, api_key: Optional[str] = None, **kwargs):
+        super().__init__(api_key, **kwargs)
+        self.api_key = api_key or config.get("GEMINI_API_KEY")
+        
+        if self.api_key:
+            os.environ["GEMINI_API_KEY"] = self.api_key
+        
+        if not self.api_key:
+            raise ValueError(
+                "Gemini API key is required. Set GEMINI_API_KEY environment "
+                "variable or provide api_key parameter."
+            )
+    
+    def get_model_prefix(self) -> str:
+        return "gemini/"
+    
+    def get_available_models(self) -> List[str]:
+        return [
+            "gemini-1.5-pro",
+            "gemini-1.5-flash",
+            "gemini-pro"
+        ]
+    
+    def get_default_model(self) -> str:
+        return "gemini-1.5-pro"
+
+
+class DeepSeekClient(BaseLLMClient):
+    """DeepSeek LLM client."""
+    
+    def __init__(self, api_key: Optional[str] = None, **kwargs):
+        super().__init__(api_key, **kwargs)
+        self.api_key = api_key or config.get("DEEPSEEK_API_KEY")
+        
+        if self.api_key:
+            os.environ["DEEPSEEK_API_KEY"] = self.api_key
+        
+        if not self.api_key:
+            raise ValueError(
+                "DeepSeek API key is required. Set DEEPSEEK_API_KEY environment "
+                "variable or provide api_key parameter."
+            )
+    
+    def get_model_prefix(self) -> str:
+        return "deepseek/"
+    
+    def get_available_models(self) -> List[str]:
+        return [
+            "deepseek-chat",
+            "deepseek-reasoner",
+            "deepseek-coder"
+        ]
+    
+    def get_default_model(self) -> str:
+        return "deepseek-chat"
+
+
+# Provider registry
+PROVIDERS = {
+    "openai": OpenAIClient,
+    "gemini": GeminiClient,
+    "deepseek": DeepSeekClient,
+}
+
+
+def get_client(provider: Optional[str] = None) -> BaseLLMClient:
+    """Get LLM client for the specified provider."""
+    provider_name = provider or config.get("PROVIDER", "openai")
+    
+    if provider_name not in PROVIDERS:
+        available = ", ".join(PROVIDERS.keys())
+        raise ValueError(f"Unknown provider '{provider_name}'. Available: {available}")
+    
+    client_class = PROVIDERS[provider_name]
+    return client_class(
+        timeout=config.get("REQUEST_TIMEOUT", 60),
+        max_retries=config.get("MAX_RETRIES", 3),
+    )
+
+
+def get_available_providers() -> List[str]:
+    """Get list of available providers."""
+    return list(PROVIDERS.keys())
+
+
+def validate_provider(provider: str) -> bool:
+    """Validate if provider is available."""
+    return provider in PROVIDERS
+
+
 # Global client instance
-_client: Optional[DeepSeekClient] = None
+_client: Optional[BaseLLMClient] = None
+_current_provider: Optional[str] = None
 
 
-def get_client() -> DeepSeekClient:
-    """Get or create global DeepSeek client instance."""
-    global _client
-
-    if _client is None:
-        _client = DeepSeekClient(
-            model=config.get("DEFAULT_MODEL"),
-            timeout=config.get("REQUEST_TIMEOUT"),
-            max_retries=config.get("MAX_RETRIES"),
-            retry_delay=config.get("RETRY_DELAY"),
-        )
-
+def get_global_client(provider: Optional[str] = None) -> BaseLLMClient:
+    """Get or create global client instance."""
+    global _client, _current_provider
+    
+    provider_name = provider or config.get("PROVIDER", "openai")
+    
+    # Create new client if provider changed or client doesn't exist
+    if _client is None or _current_provider != provider_name:
+        _client = get_client(provider_name)
+        _current_provider = provider_name
+    
     return _client
 
 
 def reset_client() -> None:
     """Reset global client instance."""
-    global _client
+    global _client, _current_provider
     _client = None
+    _current_provider = None
