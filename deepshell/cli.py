@@ -25,6 +25,7 @@ from .utils import (
     run_shell_command,
     detect_stdin,
 )
+from .llm import get_available_providers, validate_provider
 
 app = typer.Typer(
     name="deepshell",
@@ -34,6 +35,16 @@ app = typer.Typer(
 )
 
 console = Console()
+
+
+def get_default_model_for_provider(provider: str) -> str:
+    """Get the default model for a given provider."""
+    provider_defaults = {
+        "openai": "gpt-3.5-turbo",
+        "gemini": "gemini-1.5-pro", 
+        "deepseek": "deepseek-chat"
+    }
+    return provider_defaults.get(provider, "gpt-3.5-turbo")
 
 
 @app.command()
@@ -48,8 +59,8 @@ def main(
         "--provider",
         help="LLM provider to use (openai, gemini, deepseek).",
     ),
-    model: str = typer.Option(
-        config.get("DEFAULT_MODEL"),
+    model: Optional[str] = typer.Option(
+        None,
         "--model",
         "-m",
         help="Model to use (e.g., gpt-3.5-turbo, gemini-1.5-pro, deepseek-chat).",
@@ -221,6 +232,16 @@ def main(
         ChatHandler.show_session(show_chat)
         return
 
+    # Validate provider
+    if not validate_provider(provider):
+        available = ", ".join(get_available_providers())
+        console.print(f"[red]Error: Unknown provider '{provider}'. Available: {available}[/red]")
+        raise typer.Exit(1)
+
+    # Determine model - if not specified, use provider's default
+    if model is None:
+        model = get_default_model_for_provider(provider)
+    
     # Validate mutually exclusive options
     mode_options = [shell, describe_shell, code]
     if sum(mode_options) > 1:

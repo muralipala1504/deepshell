@@ -10,7 +10,7 @@ from rich.console import Console
 
 from .base_handler import BaseHandler
 from ..persona import Persona
-from ..llm import get_global_client  # <-- Import the new client getter
+from ..llm import get_global_client
 
 console = Console()
 
@@ -54,6 +54,9 @@ class DefaultHandler(BaseHandler):
         """
         Get completion from the selected LLM provider.
         """
+        # Debug print to see what's being sent
+        console.print(f"[dim]DEBUG: Provider={provider}, Model={options.get('model')}, Stream={options.get('stream')}[/dim]")
+        
         client = get_global_client(provider)
         return client.complete(messages, **options)
 
@@ -86,6 +89,11 @@ class DefaultHandler(BaseHandler):
                     **validated_options
                 )
 
+                # Check if response_generator is actually iterable
+                if not hasattr(response_generator, '__iter__'):
+                    console.print(f"[red]Error: Expected streaming response, got: {type(response_generator)}[/red]")
+                    return
+
                 full_response = self.stream_response(response_generator)
 
                 # Handle shell command execution if requested
@@ -101,27 +109,37 @@ class DefaultHandler(BaseHandler):
                 )
 
                 # Defensive: check for response structure
-                if not response or not hasattr(response, 'choices') or not response.choices:
-                    console.print("[red]Error: Invalid response from LLM[/red]")
-                    return
-                if not hasattr(response.choices[0], 'message') or not response.choices[0].message:
-                    console.print("[red]Error: Invalid message in response[/red]")
-                    return
-                if not hasattr(response.choices[0].message, 'content'):
-                    console.print("[red]Error: No content in response message[/red]")
+                if not response:
+                    console.print("[red]Error: No response from LLM[/red]")
                     return
 
-                content = response.choices[0].message.content
-                self.print_response(content)
+                # Check if it's a MockResponse (error case)
+                if hasattr(response, 'choices') and hasattr(response.choices[0], 'message'):
+                    if hasattr(response.choices[0].message, 'content'):
+                        content = response.choices[0].message.content
+                        
+                        # Check if it's an error message
+                        if content.startswith("❌ Error:"):
+                            console.print(f"[red]{content}[/red]")
+                            return
+                        
+                        self.print_response(content)
 
-                # Handle shell command execution if requested
-                if validated_options.get("interactive", False):
-                    self._handle_shell_interaction(content)
+                        # Handle shell command execution if requested
+                        if validated_options.get("interactive", False):
+                            self._handle_shell_interaction(content)
+                    else:
+                        console.print("[red]Error: No content in response message[/red]")
+                        return
+                else:
+                    console.print(f"[red]Error: Invalid response structure: {type(response)}[/red]")
+                    return
 
         except KeyboardInterrupt:
             console.print("\n[yellow]Operation cancelled by user[/yellow]")
 
         except Exception as e:
+            console.print(f"[red]Handler Error: {str(e)}[/red]")
             self.handle_error(e)
 
     def _handle_shell_interaction(self, response: str) -> None:
