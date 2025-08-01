@@ -155,7 +155,7 @@ class BaseLLMClient(ABC):
                 completion_kwargs[k] = v
 
         # Debug print
-        console.print(f"[dim]DEBUG: completion_kwargs={completion_kwargs}[/dim]")
+       # console.print(f"[dim]DEBUG: completion_kwargs={completion_kwargs}[/dim]")
 
         if stream:
             return self._stream_completion(**completion_kwargs)

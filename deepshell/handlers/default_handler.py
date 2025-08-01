@@ -55,7 +55,7 @@ class DefaultHandler(BaseHandler):
         Get completion from the selected LLM provider.
         """
         # Debug print to see what's being sent
-        console.print(f"[dim]DEBUG: Provider={provider}, Model={options.get('model')}, Stream={options.get('stream')}[/dim]")
+        #console.print(f"[dim]DEBUG: Provider={provider}, Model={options.get('model')}, Stream={options.get('stream')}[/dim]")
         
         client = get_global_client(provider)
         return client.complete(messages, **options)
