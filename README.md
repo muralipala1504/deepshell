@@ -272,4 +272,5 @@ Acknowledgments
 	
 	DeepShell – Bringing the power of the world’s best LLMs to your command line! 🚀
 Don’t just ask one AI—get a consensus.
+
 	
