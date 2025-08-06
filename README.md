@@ -263,7 +263,7 @@ Support
 
 Acknowledgments
 
-    Inspired by Shell GPT
+    Inspired by Shell GPT (https://github.com/TheR1D/shell_gpt)  for natural language shell command generation.
     Powered by OpenAI, Gemini, and DeepSeek
     Built with LiteLLM
     CLI framework: Typer
