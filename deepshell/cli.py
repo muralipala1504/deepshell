@@ -29,7 +29,7 @@ from .llm import get_available_providers, validate_provider
 
 app = typer.Typer(
     name="deepshell",
-    help="A command-line productivity tool powered by OpenAI, Gemini, and DeepSeek LLMs",
+    help="A command-line productivity tool powered by OpenAI LLMs",
     add_completion=False,
     rich_markup_mode="rich",
 )
@@ -40,9 +40,7 @@ console = Console()
 def get_default_model_for_provider(provider: str) -> str:
     """Get the default model for a given provider."""
     provider_defaults = {
-        "openai": "gpt-3.5-turbo",
-        "gemini": "gemini-1.5-pro", 
-        "deepseek": "deepseek-chat"
+        "openai": "gpt-3.5-turbo"
     }
     return provider_defaults.get(provider, "gpt-3.5-turbo")
 
@@ -57,13 +55,13 @@ def main(
     provider: str = typer.Option(
         config.get("PROVIDER", "openai"),
         "--provider",
-        help="LLM provider to use (openai, gemini, deepseek).",
+        help="LLM provider to use (openai).",
     ),
     model: Optional[str] = typer.Option(
         None,
         "--model",
         "-m",
-        help="Model to use (e.g., gpt-3.5-turbo, gemini-1.5-pro, deepseek-chat).",
+        help="Model to use (e.g., gpt-3.5-turbo).",
     ),
     temperature: float = typer.Option(
         0.0,
@@ -189,12 +187,10 @@ def main(
     ),
 ) -> None:
     """
-    DeepShell - AI-powered command-line assistant using OpenAI, Gemini, or DeepSeek LLM.
+    DeepShell - AI-powered command-line assistant using OpenAI LLM.
 
     Examples:
         deepshell --provider openai "list all files in current directory"
-        deepshell --provider gemini --shell "find large files"
-        deepshell --provider deepseek --chat mysession "explain this code" < script.py
         deepshell --repl coding
         deepshell --persona shell-expert "optimize this command"
     """
@@ -241,7 +237,7 @@ def main(
     # Determine model - if not specified, use provider's default
     if model is None:
         model = get_default_model_for_provider(provider)
-    
+
     # Validate mutually exclusive options
     mode_options = [shell, describe_shell, code]
     if sum(mode_options) > 1:
