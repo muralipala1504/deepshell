@@ -55,4 +55,5 @@ dmypy.json
 # VS Code  
 .vscode/
 venv/
-
+deepshell-agent.log  
+deepshell-alerts.log
