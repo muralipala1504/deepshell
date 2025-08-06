@@ -1,8 +1,7 @@
 """
-Multi-provider LLM client integration using LiteLLM.
+OpenAI LLM client integration using LiteLLM.
 
-This module provides a unified interface for interacting with multiple
-language model providers: OpenAI, Gemini, and DeepSeek.
+This module provides a unified interface for interacting with OpenAI language models.
 """
 
 import json
@@ -51,65 +50,46 @@ class BaseLLMClient(ABC):
 
     @abstractmethod
     def get_model_prefix(self) -> str:
-        """Get the model prefix for this provider."""
         pass
 
     @abstractmethod
     def get_available_models(self) -> List[str]:
-        """Get list of available models for this provider."""
         pass
 
     @abstractmethod
     def get_default_model(self) -> str:
-        """Get the default model for this provider."""
         pass
 
     def validate_model(self, model: str) -> bool:
-        """Validate if model is available for this provider."""
         available_models = self.get_available_models()
         return model in available_models
 
     def _create_error_response(self, error_message: str) -> Any:
-        """Create a mock response object for error cases."""
         return MockResponse(f"❌ Error: {error_message}")
 
     def _retry_with_backoff(self, func, *args, **kwargs) -> Any:
-        """Execute function with exponential backoff retry logic."""
         last_exception = None
-
         for attempt in range(self.max_retries + 1):
             try:
                 result = func(*args, **kwargs)
-
-                # Validate that we got a proper response
                 if result is None:
                     raise ValueError("API returned None response")
-
                 if isinstance(result, bool):
                     raise ValueError(f"API returned boolean: {result}")
-
-                # Check if it has the expected structure for non-streaming
                 if not kwargs.get('stream', False):
                     if not hasattr(result, 'choices'):
                         raise ValueError("API response missing 'choices' attribute")
                     if not result.choices:
                         raise ValueError("API response has empty choices")
-
                 return result
-
             except Exception as e:
                 last_exception = e
                 console.print(f"DEBUG: Exception in attempt {attempt + 1}: {str(e)}")
-
                 if attempt == self.max_retries:
                     break
-
-                # Calculate delay with exponential backoff
                 delay = self.retry_delay * (2 ** attempt)
                 console.print(f"[yellow]Retry {attempt + 1}/{self.max_retries} in {delay:.1f}s...[/yellow]")
                 time.sleep(delay)
-
-        # Create error response instead of raising exception
         console.print(f"DEBUG: All retries failed, raising: {str(last_exception)}")
         return self._create_error_response(str(last_exception))
 
@@ -124,10 +104,7 @@ class BaseLLMClient(ABC):
         functions: Optional[List[Dict[str, Any]]] = None,
         **kwargs
     ) -> Union[Any, Generator[str, None, None]]:
-        """Generate completion from the LLM."""
         model_name = model or self.get_default_model()
-
-        # Only pass supported arguments to litellm.completion
         valid_keys = {
             "model", "messages", "temperature", "top_p", "stream", "timeout", "max_tokens", "tools", "tool_choice"
         }
@@ -139,50 +116,36 @@ class BaseLLMClient(ABC):
             "stream": stream,
             "timeout": self.timeout,
         }
-
         if max_tokens is not None:
             completion_kwargs["max_tokens"] = max_tokens
-
         if functions:
             completion_kwargs["tools"] = [
                 {"type": "function", "function": func} for func in functions
             ]
             completion_kwargs["tool_choice"] = "auto"
-
-        # Add any extra kwargs that are valid
         for k, v in kwargs.items():
             if k in valid_keys:
                 completion_kwargs[k] = v
-
-        # Debug print
-       # console.print(f"[dim]DEBUG: completion_kwargs={completion_kwargs}[/dim]")
-
         if stream:
             return self._stream_completion(**completion_kwargs)
         else:
             return self._retry_with_backoff(completion, **completion_kwargs)
 
     def _stream_completion(self, **kwargs) -> Generator[str, None, None]:
-        """Handle streaming completion with proper error handling."""
         try:
             stream = self._retry_with_backoff(completion, **kwargs)
-
-            # Defensive: check if stream is iterable
             if not hasattr(stream, '__iter__'):
                 yield f"❌ Streaming Error: {getattr(stream, 'content', str(stream))}"
                 return
-
             for chunk in stream:
                 if hasattr(chunk, 'choices') and chunk.choices:
                     delta = chunk.choices[0].delta
                     if hasattr(delta, 'content') and delta.content:
                         yield delta.content
                     elif hasattr(delta, 'tool_calls') and delta.tool_calls:
-                        # Handle function calls in streaming
                         for tool_call in delta.tool_calls:
                             if tool_call.function.name:
                                 yield f"\n🔧 Calling function: {tool_call.function.name}\n"
-
         except Exception as e:
             console.print(f"[red]Streaming error: {str(e)}[/red]")
             yield f"❌ Streaming Error: {str(e)}"
@@ -193,56 +156,39 @@ class BaseLLMClient(ABC):
         system_message: Optional[str] = None,
         **kwargs
     ) -> Union[str, Generator[str, None, None]]:
-        """Simple chat interface."""
         messages = []
-
         if system_message:
             messages.append({"role": "system", "content": system_message})
-
         messages.append({"role": "user", "content": prompt})
-
         try:
             response = self.complete(messages, **kwargs)
-
             if kwargs.get("stream", False):
                 return response
             else:
-                # Defensive check for response structure
                 if not response or not hasattr(response, 'choices'):
                     return self._create_error_response("Invalid API response structure")
-
                 if not response.choices:
                     return self._create_error_response("Empty choices in API response")
-
                 if not hasattr(response.choices[0], 'message'):
                     return self._create_error_response("Invalid message structure in API response")
-
                 if not hasattr(response.choices[0].message, 'content'):
                     return self._create_error_response("No content in API response message")
-
                 return response
-
         except Exception as e:
             console.print(f"[red]Chat error: {str(e)}[/red]")
             return self._create_error_response(f"Chat failed: {str(e)}")
 
     def test_connection(self) -> bool:
-        """Test connection to the API."""
         try:
             response = self.complete(
                 messages=[{"role": "user", "content": "Hello"}],
                 max_tokens=10
             )
-
-            # Defensive check
             if not response or not hasattr(response, 'choices') or not response.choices:
                 return False
-
             if not hasattr(response.choices[0], 'message') or not response.choices[0].message:
                 return False
-
             return bool(response.choices[0].message.content)
-
         except Exception as e:
             console.print(f"[red]Connection test failed: {str(e)}[/red]")
             return False
@@ -254,10 +200,8 @@ class OpenAIClient(BaseLLMClient):
     def __init__(self, api_key: Optional[str] = None, **kwargs):
         super().__init__(api_key, **kwargs)
         self.api_key = api_key or config.get("OPENAI_API_KEY")
-
         if self.api_key:
             os.environ["OPENAI_API_KEY"] = self.api_key
-
         if not self.api_key:
             raise ValueError(
                 "OpenAI API key is required. Set OPENAI_API_KEY environment "
@@ -280,82 +224,17 @@ class OpenAIClient(BaseLLMClient):
         return "gpt-3.5-turbo"
 
 
-class GeminiClient(BaseLLMClient):
-    """Google Gemini LLM client."""
-
-    def __init__(self, api_key: Optional[str] = None, **kwargs):
-        super().__init__(api_key, **kwargs)
-        self.api_key = api_key or config.get("GEMINI_API_KEY")
-
-        if self.api_key:
-            os.environ["GEMINI_API_KEY"] = self.api_key
-
-        if not self.api_key:
-            raise ValueError(
-                "Gemini API key is required. Set GEMINI_API_KEY environment "
-                "variable or provide api_key parameter."
-            )
-
-    def get_model_prefix(self) -> str:
-        return "gemini/"
-
-    def get_available_models(self) -> List[str]:
-        return [
-            "gemini-1.5-pro",
-            "gemini-1.5-flash",
-            "gemini-pro"
-        ]
-
-    def get_default_model(self) -> str:
-        return "gemini-1.5-pro"
-
-
-class DeepSeekClient(BaseLLMClient):
-    """DeepSeek LLM client."""
-
-    def __init__(self, api_key: Optional[str] = None, **kwargs):
-        super().__init__(api_key, **kwargs)
-        self.api_key = api_key or config.get("DEEPSEEK_API_KEY")
-
-        if self.api_key:
-            os.environ["DEEPSEEK_API_KEY"] = self.api_key
-
-        if not self.api_key:
-            raise ValueError(
-                "DeepSeek API key is required. Set DEEPSEEK_API_KEY environment "
-                "variable or provide api_key parameter."
-            )
-
-    def get_model_prefix(self) -> str:
-        return "deepseek/"
-
-    def get_available_models(self) -> List[str]:
-        return [
-            "deepseek-chat",
-            "deepseek-reasoner",
-            "deepseek-coder"
-        ]
-
-    def get_default_model(self) -> str:
-        return "deepseek-chat"
-
-
-# Provider registry
+# Provider registry (OpenAI only)
 PROVIDERS = {
     "openai": OpenAIClient,
-    "gemini": GeminiClient,
-    "deepseek": DeepSeekClient,
 }
 
 
 def get_client(provider: Optional[str] = None) -> BaseLLMClient:
-    """Get LLM client for the specified provider."""
+    """Get LLM client for OpenAI."""
     provider_name = provider or config.get("PROVIDER", "openai")
-
-    if provider_name not in PROVIDERS:
-        available = ", ".join(PROVIDERS.keys())
-        raise ValueError(f"Unknown provider '{provider_name}'. Available: {available}")
-
+    if provider_name != "openai":
+        raise ValueError("Only 'openai' provider is supported in this version.")
     client_class = PROVIDERS[provider_name]
     return client_class(
         timeout=config.get("REQUEST_TIMEOUT", 60),
@@ -364,13 +243,13 @@ def get_client(provider: Optional[str] = None) -> BaseLLMClient:
 
 
 def get_available_providers() -> List[str]:
-    """Get list of available providers."""
-    return list(PROVIDERS.keys())
+    """Get list of available providers (OpenAI only)."""
+    return ["openai"]
 
 
 def validate_provider(provider: str) -> bool:
-    """Validate if provider is available."""
-    return provider in PROVIDERS
+    """Validate if provider is available (OpenAI only)."""
+    return provider == "openai"
 
 
 # Global client instance
@@ -381,14 +260,12 @@ _current_provider: Optional[str] = None
 def get_global_client(provider: Optional[str] = None) -> BaseLLMClient:
     """Get or create global client instance."""
     global _client, _current_provider
-
     provider_name = provider or config.get("PROVIDER", "openai")
-
-    # Create new client if provider changed or client doesn't exist
+    if provider_name != "openai":
+        raise ValueError("Only 'openai' provider is supported in this version.")
     if _client is None or _current_provider != provider_name:
         _client = get_client(provider_name)
         _current_provider = provider_name
-
     return _client
 
 
