@@ -18,11 +18,11 @@ Key Features:
 
 __version__ = "1.0.0"
 __author__ = "DeepShell Team"
-__email__ = "team@deepshell.ai"
+__email__ = "muralipala1504@gmail.com"
 __license__ = "MIT"
 
 from .cli import app
 from .config import config
 #from .llm import DeepSeekClient
 
-__all__ = ["app", "config", "DeepSeekClient", "__version__"]
+__all__ = ["app", "config",  "__version__"]
