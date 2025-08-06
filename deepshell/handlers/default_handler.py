@@ -56,7 +56,7 @@ class DefaultHandler(BaseHandler):
         """
         # Debug print to see what's being sent
         #console.print(f"[dim]DEBUG: Provider={provider}, Model={options.get('model')}, Stream={options.get('stream')}[/dim]")
-        
+
         client = get_global_client(provider)
         return client.complete(messages, **options)
 
@@ -66,7 +66,7 @@ class DefaultHandler(BaseHandler):
 
         Args:
             prompt: User prompt to process
-            provider: LLM provider to use (openai, gemini, deepseek)
+            provider: LLM provider to use (openai)
             **options: Handler options (model, temperature, etc.)
         """
         if not prompt.strip():
@@ -117,12 +117,12 @@ class DefaultHandler(BaseHandler):
                 if hasattr(response, 'choices') and hasattr(response.choices[0], 'message'):
                     if hasattr(response.choices[0].message, 'content'):
                         content = response.choices[0].message.content
-                        
+
                         # Check if it's an error message
                         if content.startswith("❌ Error:"):
                             console.print(f"[red]{content}[/red]")
                             return
-                        
+
                         self.print_response(content)
 
                         # Handle shell command execution if requested
