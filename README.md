@@ -257,10 +257,9 @@ See CHANGELOG.md for version history and updates.
 
 Support
 
-    📖 Documentation: https://deepshell.readthedocs.io
     🐛 Bug Reports: GitHub Issues
     💬 Discussions: GitHub Discussions
-    📧 Email: team@deepshell.ai
+    📧 Email: muralipala1504@gmail.com
 
 Acknowledgments
 

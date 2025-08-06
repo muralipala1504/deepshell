@@ -5,7 +5,7 @@ description = "A command-line productivity tool powered by OpenAI LLM"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "DeepShell Team", email = "team@deepshell.ai"}
+    {name = "DeepShell Team", email = "muralipala1504@gmail.com"}
 ]
 keywords = ["ai", "cli", "shell", "llm", "productivity"]
 classifiers = [
