@@ -168,7 +168,7 @@ class PersonaManager:
         built_in_personas = {
             "default": Persona(
                 name="default",
-                prompt="""You are DeepShell, an AI assistant powered by DeepSeek LLM.
+                prompt="""You are DeepShell, an AI assistant powered by Deepshell LLM.
 You are a programming and system administration assistant managing {os} with {shell} shell.
 
 Key guidelines:
