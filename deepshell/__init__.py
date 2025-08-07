@@ -2,7 +2,7 @@
 """
 DeepShell - A command-line productivity tool powered by DeepSeek LLM
 
-DeepShell is a Shell GPT-inspired CLI tool that leverages DeepSeek's powerful
+DeepShell is a Shell GPT-inspired CLI tool that leverages OpenAI's powerful
 language models to provide AI-powered assistance for shell commands, code
 generation, and general queries.
 
@@ -23,6 +23,5 @@ __license__ = "MIT"
 
 from .cli import app
 from .config import config
-#from .llm import DeepSeekClient
 
 __all__ = ["app", "config",  "__version__"]
