@@ -5,14 +5,11 @@ This module defines the command-line interface using Typer, handling all
 user interactions and routing to appropriate handlers.
 """
 
-import os
 import sys
-from pathlib import Path
 from typing import Optional
 
 import typer
 from rich.console import Console
-from rich.panel import Panel
 
 from .config import config
 from .handlers.chat_handler import ChatHandler
@@ -22,10 +19,9 @@ from .persona import get_persona, list_personas, create_persona, show_persona
 from .utils import (
     get_edited_prompt,
     install_shell_integration,
-    run_shell_command,
     detect_stdin,
 )
-from .llm import get_available_providers, validate_provider
+from .llm import validate_provider
 
 app = typer.Typer(
     name="deepshell",
@@ -39,23 +35,20 @@ console = Console()
 
 def get_default_model_for_provider(provider: str) -> str:
     """Get the default model for a given provider."""
-    provider_defaults = {
-        "openai": "gpt-3.5-turbo"
-    }
-    return provider_defaults.get(provider, "gpt-3.5-turbo")
+    # Since only OpenAI is supported, return default OpenAI model
+    return "gpt-3.5-turbo"
 
 
 @app.command()
 def main(
     prompt: str = typer.Argument(
-        "",
-        show_default=False,
+        ...,
         help="The prompt to generate completions for.",
     ),
     provider: str = typer.Option(
-        config.get("PROVIDER", "openai"),
+        "openai",
         "--provider",
-        help="LLM provider to use (openai).",
+        help="LLM provider to use (only 'openai' supported).",
     ),
     model: Optional[str] = typer.Option(
         None,
@@ -228,13 +221,12 @@ def main(
         ChatHandler.show_session(show_chat)
         return
 
-    # Validate provider
-    if not validate_provider(provider):
-        available = ", ".join(get_available_providers())
-        console.print(f"[red]Error: Unknown provider '{provider}'. Available: {available}[/red]")
+    # Validate provider (only openai supported)
+    if provider != "openai":
+        console.print("[red]Error: Only 'openai' provider is supported.[/red]")
         raise typer.Exit(1)
 
-    # Determine model - if not specified, use provider's default
+    # Determine model - if not specified, use default
     if model is None:
         model = get_default_model_for_provider(provider)
 
