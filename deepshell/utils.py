@@ -1,4 +1,3 @@
-
 """
 Utility functions for DeepShell.
 
@@ -24,7 +23,7 @@ console = Console()
 def detect_stdin() -> bool:
     """
     Detect if there's input available on stdin.
-    
+
     Returns:
         True if stdin has data available
     """
@@ -34,33 +33,33 @@ def detect_stdin() -> bool:
 def get_edited_prompt() -> str:
     """
     Open user's preferred editor for prompt input.
-    
+
     Returns:
         Content from editor
     """
     editor = os.getenv("EDITOR", "nano")
-    
+
     with tempfile.NamedTemporaryFile(mode="w+", suffix=".txt", delete=False) as f:
         temp_file = f.name
-    
+
     try:
         # Open editor
         subprocess.run([editor, temp_file], check=True)
-        
+
         # Read content
         with open(temp_file, "r", encoding="utf-8") as f:
             content = f.read().strip()
-        
+
         return content
-    
+
     except subprocess.CalledProcessError:
         console.print(f"[red]Error: Could not open editor '{editor}'[/red]")
         return ""
-    
+
     except FileNotFoundError:
         console.print(f"[red]Error: Editor '{editor}' not found[/red]")
         return ""
-    
+
     finally:
         # Clean up temp file
         try:
@@ -72,22 +71,22 @@ def get_edited_prompt() -> str:
 def run_shell_command(command: str, interactive: bool = False) -> Optional[str]:
     """
     Execute shell command with optional interactive confirmation.
-    
+
     Args:
         command: Shell command to execute
         interactive: Whether to prompt for confirmation
-        
+
     Returns:
         Command output if successful, None otherwise
     """
     if not command.strip():
         return None
-    
+
     # Display command with syntax highlighting
     syntax = Syntax(command, "bash", theme="monokai", line_numbers=False)
     console.print("\n[bold]Generated Command:[/bold]")
     console.print(syntax)
-    
+
     if interactive:
         # Interactive confirmation
         console.print("\n[bold]Options:[/bold]")
@@ -95,38 +94,38 @@ def run_shell_command(command: str, interactive: bool = False) -> Optional[str]:
         console.print("  [yellow]m[/yellow] - Modify command")
         console.print("  [blue]d[/blue] - Describe command")
         console.print("  [red]a[/red] - Abort")
-        
+
         choice = Prompt.ask(
             "Choose action",
             choices=["e", "m", "d", "a"],
             default="e"
         )
-        
+
         if choice == "a":
             console.print("[yellow]Command execution aborted[/yellow]")
             return None
-        
+
         elif choice == "m":
             # Allow user to modify command
             modified_command = Prompt.ask("Enter modified command", default=command)
             return run_shell_command(modified_command, interactive=True)
-        
+
         elif choice == "d":
             # Describe command using describe-shell persona
             from .persona import get_persona
             from .handlers.default_handler import DefaultHandler
-            
+
             describe_persona = get_persona("describe-shell")
             handler = DefaultHandler(describe_persona, markdown=True)
             handler.handle(f"Explain this command: {command}")
-            
+
             # Ask again after description
             return run_shell_command(command, interactive=True)
-    
+
     # Execute command
     try:
         console.print(f"\n[dim]Executing: {command}[/dim]")
-        
+
         result = subprocess.run(
             command,
             shell=True,
@@ -134,26 +133,26 @@ def run_shell_command(command: str, interactive: bool = False) -> Optional[str]:
             text=True,
             timeout=30
         )
-        
+
         if result.stdout:
             console.print("\n[bold green]Output:[/bold green]")
             console.print(result.stdout)
-        
+
         if result.stderr:
             console.print("\n[bold red]Error:[/bold red]")
             console.print(result.stderr)
-        
+
         if result.returncode != 0:
             console.print(f"\n[red]Command failed with exit code {result.returncode}[/red]")
         else:
             console.print("\n[green]✓ Command executed successfully[/green]")
-        
+
         return result.stdout
-    
+
     except subprocess.TimeoutExpired:
         console.print("\n[red]Command timed out after 30 seconds[/red]")
         return None
-    
+
     except Exception as e:
         console.print(f"\n[red]Error executing command: {e}[/red]")
         return None
@@ -163,9 +162,9 @@ def install_shell_integration() -> None:
     """Install shell integration for hotkey access."""
     shell = detect_shell()
     home = Path.home()
-    
+
     console.print(f"[cyan]Installing shell integration for {shell}...[/cyan]")
-    
+
     if shell == "bash":
         rc_file = home / ".bashrc"
         integration_code = '''
@@ -185,7 +184,7 @@ function ds_suggest() {
 # Bind Ctrl+G to DeepShell suggestion
 bind -x '"\\C-g":"ds_suggest"'
 '''
-    
+
     elif shell == "zsh":
         rc_file = home / ".zshrc"
         integration_code = '''
@@ -204,27 +203,27 @@ function ds_suggest() {
 # Bind Ctrl+G to DeepShell suggestion
 bindkey -s '^G' 'ds_suggest '
 '''
-    
+
     else:
         console.print(f"[yellow]Shell integration not available for {shell}[/yellow]")
         return
-    
+
     # Check if integration already exists
     if rc_file.exists():
         content = rc_file.read_text()
         if "DeepShell integration" in content:
             console.print("[yellow]Shell integration already installed[/yellow]")
             return
-    
+
     # Add integration
     try:
         with open(rc_file, "a", encoding="utf-8") as f:
             f.write(integration_code)
-        
+
         console.print(f"[green]✓ Shell integration added to {rc_file}[/green]")
         console.print("[dim]Restart your shell or run 'source ~/.bashrc' (or ~/.zshrc) to activate[/dim]")
         console.print("[dim]Use Ctrl+G to trigger DeepShell suggestions[/dim]")
-    
+
     except IOError as e:
         console.print(f"[red]Error installing shell integration: {e}[/red]")
 
@@ -232,7 +231,7 @@ bindkey -s '^G' 'ds_suggest '
 def detect_shell() -> str:
     """
     Detect current shell.
-    
+
     Returns:
         Shell name (bash, zsh, fish, etc.)
     """
@@ -240,7 +239,7 @@ def detect_shell() -> str:
     shell = os.getenv("SHELL", "")
     if shell:
         return os.path.basename(shell)
-    
+
     # Try parent process detection
     try:
         result = subprocess.run(
@@ -253,7 +252,7 @@ def detect_shell() -> str:
             return result.stdout.strip()
     except (subprocess.TimeoutExpired, FileNotFoundError):
         pass
-    
+
     # Default fallback
     return "bash"
 
@@ -261,16 +260,16 @@ def detect_shell() -> str:
 def detect_os() -> str:
     """
     Detect operating system with detailed information.
-    
+
     Returns:
         OS name and version
     """
     system = platform.system()
-    
+
     if system == "Darwin":
         version = platform.mac_ver()[0]
         return f"macOS {version}"
-    
+
     elif system == "Linux":
         try:
             # Try to get distribution info
@@ -280,14 +279,14 @@ def detect_os() -> str:
                         return line.split("=", 1)[1].strip().strip('"')
         except FileNotFoundError:
             pass
-        
+
         # Fallback to generic Linux
         return f"Linux {platform.release()}"
-    
+
     elif system == "Windows":
         version = platform.version()
         return f"Windows {version}"
-    
+
     else:
         return f"{system} {platform.release()}"
 
@@ -295,10 +294,10 @@ def detect_os() -> str:
 def format_file_size(size_bytes: int) -> str:
     """
     Format file size in human-readable format.
-    
+
     Args:
         size_bytes: Size in bytes
-        
+
     Returns:
         Formatted size string
     """
@@ -312,11 +311,11 @@ def format_file_size(size_bytes: int) -> str:
 def truncate_text(text: str, max_length: int = 100) -> str:
     """
     Truncate text to specified length with ellipsis.
-    
+
     Args:
         text: Text to truncate
         max_length: Maximum length
-        
+
     Returns:
         Truncated text
     """
@@ -327,32 +326,32 @@ def truncate_text(text: str, max_length: int = 100) -> str:
 
 def validate_api_key(api_key: str) -> bool:
     """
-    Validate DeepSeek API key format.
-    
+    Validate OpenAI API key format.
+
     Args:
         api_key: API key to validate
-        
+
     Returns:
         True if format appears valid
     """
     if not api_key:
         return False
-    
-    # DeepSeek API keys typically start with 'sk-'
+
+    # OpenAI API keys typically start with 'sk-'
     if not api_key.startswith("sk-"):
         return False
-    
+
     # Should be reasonably long
     if len(api_key) < 20:
         return False
-    
+
     return True
 
 
 def get_system_info() -> dict:
     """
     Get comprehensive system information.
-    
+
     Returns:
         Dictionary with system details
     """
@@ -372,14 +371,14 @@ def get_system_info() -> dict:
 def print_system_info() -> None:
     """Print system information in a formatted table."""
     from rich.table import Table
-    
+
     info = get_system_info()
-    
+
     table = Table(title="System Information", show_header=True, header_style="bold cyan")
     table.add_column("Property", style="green")
     table.add_column("Value", style="white")
-    
+
     for key, value in info.items():
         table.add_row(key.replace("_", " ").title(), str(value))
-    
+
     console.print(table)
