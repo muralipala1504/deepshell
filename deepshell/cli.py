@@ -32,6 +32,22 @@ app = typer.Typer(
 
 console = Console()
 
+# Add a callback to handle global options like --version
+@app.callback()
+def main_callback(
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-v",
+        help="Show version information.",
+        is_eager=True,  # Process this option before others
+    )
+):
+    if version:
+        from . import __version__
+        console.print(f"DeepShell version {__version__}")
+        raise typer.Exit()
+
 
 def get_default_model_for_provider(provider: str) -> str:
     """Get the default model for a given provider."""
@@ -172,12 +188,6 @@ def main(
         "--install-integration",
         help="Install shell integration.",
     ),
-    version: bool = typer.Option(
-        False,
-        "--version",
-        "-v",
-        help="Show version information.",
-    ),
 ) -> None:
     """
     DeepShell - AI-powered command-line assistant using OpenAI LLM.
@@ -187,12 +197,6 @@ def main(
         deepshell --repl coding
         deepshell --persona shell-expert "optimize this command"
     """
-
-    # Handle version flag
-    if version:
-        from . import __version__
-        console.print(f"DeepShell version {__version__}")
-        return
 
     # Handle installation
     if install_integration:
