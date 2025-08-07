@@ -306,6 +306,12 @@ class BaseHandler:
         # Boolean options
         validated["stream"] = bool(options.get("stream", True))
         validated["cache"] = bool(options.get("cache", True))
-        validated["functions"] = bool(options.get("functions", False))
+
+        funcs = options.get("functions")
+        if funcs is None or isinstance(funcs, list):
+            validated["functions"] = funcs
+        else:
+            # Defensive fallback
+            validated["functions"] = None
 
         return validated
