@@ -1,6 +1,6 @@
 
 """
-DeepShell - A command-line productivity tool powered by DeepSeek LLM
+DeepShell - A command-line productivity tool powered by OpenAI LLM
 
 DeepShell is a Shell GPT-inspired CLI tool that leverages OpenAI's powerful
 language models to provide AI-powered assistance for shell commands, code
