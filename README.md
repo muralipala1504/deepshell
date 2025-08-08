@@ -246,6 +246,24 @@ PROVIDER=openai  # or gemini, deepseek
 	isort deepshell/
 	flake8 deepshell/
 
+
+## Docker Usage
+
+### Build the Docker image
+
+```bash
+docker build -t deepshell:latest .
+
+Run DeepShell with your OpenAI API key
+
+docker run -it --rm -e OPENAI_API_KEY="your_api_key_here" deepshell:latest main "your prompt"
+
+Persist logs or config (optional)
+
+docker run -it --rm -e OPENAI_API_KEY="your_api_key_here" -v /path/on/host:/app/logs deepshell:latest main "your prompt"
+
+
+
 License
 
 MIT License - see LICENSE file for details.
