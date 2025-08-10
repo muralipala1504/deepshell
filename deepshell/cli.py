@@ -6,6 +6,13 @@ user interactions and routing to appropriate handlers.
 """
 
 import sys
+
+# Early version check to print version and exit before CLI parsing
+if "--version" in sys.argv or "-v" in sys.argv:
+    from . import __version__
+    print(f"DeepShell version {__version__}")
+    sys.exit(0)
+
 from typing import Optional
 
 import typer
