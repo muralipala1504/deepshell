@@ -307,4 +307,7 @@ def main(
 
 
 if __name__ == "__main__":
+    if len(sys.argv) == 1 or (len(sys.argv) > 1 and not sys.argv[1].startswith("-") and sys.argv[1] not in app.registered_commands):
+        # Insert 'main' as the default command if no command is given
+        sys.argv.insert(1, "main")
     app()
