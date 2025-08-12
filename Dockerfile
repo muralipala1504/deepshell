@@ -9,7 +9,11 @@ COPY setup.py requirements.txt pyproject.toml README.md /app/
 COPY deepshell /app/deepshell
 COPY docs /app/docs
 
+<<<<<<< HEAD
 # Copy entrypoint script and make it executable
+=======
+# Copy entrypoint script
+>>>>>>> 399a905 (Dcokerfile fixed)
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
