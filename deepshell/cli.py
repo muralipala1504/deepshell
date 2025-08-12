@@ -117,27 +117,27 @@ def main(
         "--editor",
         help="Use $EDITOR for prompt input.",
     ),
-    chat: Optional[str] = typer.Option(
-        None,
-        "--chat",
-        help="Chat session ID ('temp' for temporary).",
-    ),
-    repl: Optional[str] = typer.Option(
-        None,
-        "--repl",
-        help="Start REPL mode with session ID.",
-    ),
-    show_chat: Optional[str] = typer.Option(
-        None,
-        "--show-chat",
-        help="Display chat history.",
-    ),
-    list_chats: bool = typer.Option(
-        False,
-        "--list-chats",
-        "-lc",
-        help="List all chat sessions.",
-    ),
+    # chat: Optional[str] = typer.Option(
+    #     None,
+    #     "--chat",
+    #     help="Chat session ID ('temp' for temporary).",
+    # ),
+    # repl: Optional[str] = typer.Option(
+    #     None,
+    #     "--repl",
+    #     help="Start REPL mode with session ID.",
+    # ),
+    # show_chat: Optional[str] = typer.Option(
+    #     None,
+    #     "--show-chat",
+    #     help="Display chat history.",
+    # ),
+    # list_chats: bool = typer.Option(
+    #     False,
+    #     "--list-chats",
+    #     "-lc",
+    #     help="List all chat sessions.",
+    # ),
     persona: Optional[str] = typer.Option(
         None,
         "--persona",
@@ -177,7 +177,7 @@ def main(
 
     Examples:
         deepshell --provider openai "list all files in current directory"
-        deepshell --repl coding
+        # deepshell --repl coding
         deepshell --persona shell-expert "optimize this command"
     """
 
@@ -206,13 +206,13 @@ def main(
         return
 
     # Handle chat management
-    if list_chats:
-        ChatHandler.list_sessions()
-        return
+    # if list_chats:
+    #     ChatHandler.list_sessions()
+    #     return
 
-    if show_chat:
-        ChatHandler.show_session(show_chat)
-        return
+    # if show_chat:
+    #     ChatHandler.show_session(show_chat)
+    #     return
 
     # Validate provider (only openai supported)
     if provider != "openai":
@@ -246,7 +246,7 @@ def main(
     else:
         full_prompt = prompt
 
-    if not full_prompt and not repl:
+    if not full_prompt and not False:  # repl is commented out
         console.print("[red]Error: No prompt provided. Use --help for usage information.[/red]")
         raise typer.Exit(1)
 
@@ -276,15 +276,15 @@ def main(
 
     # Route to appropriate handler
     try:
-        if repl:
-            handler = ReplHandler(repl, persona_obj, markdown)
-            handler.handle(**handler_options)
-        elif chat:
-            handler = ChatHandler(chat, persona_obj, markdown)
-            handler.handle(full_prompt, **handler_options)
-        else:
-            handler = DefaultHandler(persona_obj, markdown)
-            handler.handle(full_prompt, **handler_options)
+        # if repl:
+        #     handler = ReplHandler(repl, persona_obj, markdown)
+        #     handler.handle(**handler_options)
+        # elif chat:
+        #     handler = ChatHandler(chat, persona_obj, markdown)
+        #     handler.handle(full_prompt, **handler_options)
+        # else:
+        handler = DefaultHandler(persona_obj, markdown)
+        handler.handle(full_prompt, **handler_options)
 
     except KeyboardInterrupt:
         console.print("\n[yellow]Operation cancelled by user.[/yellow]")
