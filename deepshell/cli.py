@@ -6,13 +6,6 @@ user interactions and routing to appropriate handlers.
 """
 
 import sys
-
-# Early version check to print version and exit before CLI parsing
-if "--version" in sys.argv or "-v" in sys.argv:
-    from . import __version__
-    print(f"DeepShell version {__version__}")
-    sys.exit(0)
-
 from typing import Optional
 
 import typer
@@ -28,7 +21,6 @@ from .utils import (
     install_shell_integration,
     detect_stdin,
 )
-from .llm import validate_provider
 
 app = typer.Typer(
     name="deepshell",
@@ -39,33 +31,11 @@ app = typer.Typer(
 
 console = Console()
 
-# Add a callback to handle global options like --version
-@app.callback()
-def main_callback(
-    version: bool = typer.Option(
-        False,
-        "--version",
-        "-v",
-        help="Show version information.",
-        is_eager=True,  # Process this option before others
-    )
-):
-    if version:
-        from . import __version__
-        console.print(f"DeepShell version {__version__}")
-        raise typer.Exit()
-
-
-def get_default_model_for_provider(provider: str) -> str:
-    """Get the default model for a given provider."""
-    # Since only OpenAI is supported, return default OpenAI model
-    return "gpt-3.5-turbo"
-
-
 @app.command()
 def main(
     prompt: str = typer.Argument(
-        ...,
+        "",
+        show_default=False,
         help="The prompt to generate completions for.",
     ),
     provider: str = typer.Option(
@@ -195,6 +165,12 @@ def main(
         "--install-integration",
         help="Install shell integration.",
     ),
+    version: bool = typer.Option(
+        False,
+        "--version",
+        "-v",
+        help="Show version information.",
+    ),
 ) -> None:
     """
     DeepShell - AI-powered command-line assistant using OpenAI LLM.
@@ -204,6 +180,12 @@ def main(
         deepshell --repl coding
         deepshell --persona shell-expert "optimize this command"
     """
+
+    # Handle version flag
+    if version:
+        from . import __version__
+        console.print(f"DeepShell version {__version__}")
+        return
 
     # Handle installation
     if install_integration:
@@ -239,7 +221,7 @@ def main(
 
     # Determine model - if not specified, use default
     if model is None:
-        model = get_default_model_for_provider(provider)
+        model = "gpt-3.5-turbo"
 
     # Validate mutually exclusive options
     mode_options = [shell, describe_shell, code]
@@ -282,7 +264,6 @@ def main(
 
     # Create handler options
     handler_options = {
-        "provider": provider,
         "model": model,
         "temperature": temperature,
         "top_p": top_p,
