@@ -9,10 +9,6 @@ COPY setup.py requirements.txt pyproject.toml README.md /app/
 COPY deepshell /app/deepshell
 COPY docs /app/docs
 
-# Copy entrypoint script and make it executable
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
-
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
@@ -23,5 +19,5 @@ RUN pip install .
 RUN useradd -m deepshelluser
 USER deepshelluser
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Default command if no entrypoint override
 CMD ["--help"]
