@@ -14,8 +14,6 @@ DeepShell is your trusted assistant for Linux, coding, and automation.
 
 - 🤖 AI-Powered Assistance: Leverage OpenAI’s advanced language models  
 - 🐚 Shell Command Generation: Generate and execute shell commands with AI  
-- 💬 Interactive Chat: Persistent conversation sessions  
-- 🔄 REPL Mode: Interactive Read-Eval-Print Loop  
 - 🎭 Persona System: Specialized AI behaviors for different tasks  
 - ⚡ Streaming Responses: Real-time response generation  
 - 💾 Smart Caching: Reduce API costs with intelligent caching  
@@ -36,44 +34,43 @@ Just like you’d get a second opinion from another expert before a big decision
 
 ## Installation
 
-### From PyPI (Recommended)
-
-```bash
+### From PyPI (Recommended)  
+  
+```bash  
 pip install deepshell
 
 From Source
-git clone https://github.com/deepshell/deepshell.git
+
+git clone https://github.com/muralipala1504/deepshell.git
 cd deepshell
 pip install -e .
 
 Development Installation
-git clone https://github.com/deepshell/deepshell.git
+
+git clone https://github.com/muralipala1504/deepshell.git
 cd deepshell
-pip install -e ".[dev]"
+pip install -e .[dev]
 
 Quick Start
-Get your OpenAI API key
+
+Get your OpenAI API key.
 
 Set your API key:
+
 export OPENAI_API_KEY="sk-your-openai-key"
 
-Start using DeepShell:
+Start using DeepShell with prompts:
 
 deepshell --provider openai "How do I list all files in a directory?"
+
+Or simply:
+
+deepshell "How do I list all files in a directory?"
 
 Usage Examples
 Shell Command Generation
 
 deepshell --provider openai --shell "compress all .log files"
-
-Chat Sessions
-
-deepshell --provider openai --chat work "Help me debug this Python script"
-
-REPL Mode
-
-deepshell --provider openai --repl coding
-
 Personas (Specialized AI Behaviors)
 
 deepshell --provider openai --persona shell "optimize this command: find . -name '*.py'"
@@ -116,7 +113,6 @@ export OPENAI_API_KEY="sk-your-key"
 export DEFAULT_MODEL="gpt-3.5-turbo"
 
 Supported Models
-
 Model	Notes
 gpt-3.5-turbo	Most users, reliable
 gpt-4	Advanced capabilities
@@ -127,7 +123,6 @@ Basic Commands
 deepshell [OPTIONS] [PROMPT]
 
 Options
-
 Option	Description
 --provider	LLM provider to use (only openai)
 --model, -m	Model to use (see above)
@@ -138,8 +133,6 @@ Option	Description
 --describe-shell, -d	Describe shell commands
 --code, -c	Generate code only
 --interactive	Interactive shell execution
---chat	Chat session ID
---repl	Start REPL mode
 --persona, -p	AI persona to use
 --functions	Enable function calling
 --stream/--no-stream	Enable/disable streaming
@@ -176,7 +169,6 @@ Performance Tips
 
 Troubleshooting
 Common Issues
-
 API Key Not Found
 
 export OPENAI_API_KEY="sk-your-key-here"
@@ -193,18 +185,17 @@ Cache Issues
 rm -rf ~/.cache/deepshell/
 
 Permission Issues
-
 chmod 755 ~/.config/deepshell/
 
 Contributing
 
 We welcome contributions! Please see our Contributing Guide for details.
 
-git clone https://github.com/deepshell/deepshell.git
+git clone https://github.com/muralipala1504/deepshell.git
 cd deepshell
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -e ".[dev]"
+pip install -e .[dev]
 
 Running Tests
 
@@ -221,11 +212,11 @@ docker build -t deepshell:latest .
 
 Run DeepShell with your OpenAI API key
 
-docker run -it --rm -e OPENAI_API_KEY="your_api_key_here" deepshell:latest main "your prompt"
+docker run -it --rm -e OPENAI_API_KEY="your_api_key_here" deepshell:latest "your prompt"
 
 Persist logs or config (optional)
 
-docker run -it --rm -e OPENAI_API_KEY="your_api_key_here" -v /path/on/host:/app/logs deepshell:latest main "your prompt"
+docker run -it --rm -e OPENAI_API_KEY="your_api_key_here" -v /path/on/host:/app/logs deepshell:latest "your prompt"
 
 License
 
@@ -239,7 +230,7 @@ Support
 
     🐛 Bug Reports: GitHub Issues
     💬 Discussions: GitHub Discussions
-    📧 Email: muralipala1504@gmail.
+    📧 Email: muralipala1504@gmail.com
 
 Acknowledgments
 
@@ -251,4 +242,3 @@ Acknowledgments
 
 DeepShell – Bringing the power of the world’s best LLMs to your command line! 🚀
 Don’t just ask one AI—get a consensus.
-
