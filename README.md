@@ -255,5 +255,17 @@ Acknowledgments
     CLI framework: Typer
     Rich formatting: Rich
 
+Sponsor / Support
+
+If you find DeepShell helpful and want to support its ongoing development, consider becoming a sponsor! Your support helps improve features, maintain hosting costs, and fuel innovation.
+How to Support
+
+    Buy Me a Coffee: https://buymeacoffee.com/muralipala
+    Patreon: https://www.patreon.com/TheDeepShellForge
+    GitHub Sponsors: https://github.com/sponsors/muralipala1504
+
+Thank you for your support! 🙌
+
 DeepShell – Bringing the power of the world’s best LLMs to your command line! 🚀
 Don’t just ask one AI—get a consensus.
+
