@@ -206,17 +206,32 @@ isort deepshell/
 flake8 deepshell/
 
 Docker Usage
-Build the Docker image
+Pull the official DeepShell image from Docker Hub
+
+docker pull moorelee/deepshell:latest
+
+Or build the Docker image locally
 
 docker build -t deepshell:latest .
 
-Run DeepShell with your OpenAI API key
+Run DeepShell with an interactive shell
 
-docker run -it --rm -e OPENAI_API_KEY="your_api_key_here" deepshell:latest "your prompt"
+docker run -it --rm --entrypoint /bin/bash moorelee/deepshell:latest
 
-Persist logs or config (optional)
+Inside the container shell
 
-docker run -it --rm -e OPENAI_API_KEY="your_api_key_here" -v /path/on/host:/app/logs deepshell:latest "your prompt"
+Set your OpenAI API key:
+
+export OPENAI_API_KEY="your_api_key_here"
+
+Run DeepShell commands:
+
+deepshell "your prompt here"
+
+Optional: Persist logs or config
+
+docker run -it --rm -e OPENAI_API_KEY="your_api_key_here" -v /path/on/host:/app/logs moorelee/deepshell:latest "your prompt"
+
 
 License
 
