@@ -28,6 +28,7 @@ Just like you’d get a second opinion from another expert before a big decision
 
 ## Installation
 
+Compatibility: Tested on RHEL 9.6, Ubuntu 22.04, Debian 11, and should work on most major Linux distributions with Docker installed.
 ### From PyPI (Recommended)
 
 ```bash
