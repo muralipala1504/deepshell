@@ -37,6 +37,8 @@ pip install deepshell
 
 From Source
 
+```bash
+
 git clone https://github.com/muralipala1504/deepshell.git
 cd deepshell
 pip install -e .
