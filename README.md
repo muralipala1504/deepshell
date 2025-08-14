@@ -38,68 +38,99 @@ Just like you’d get a second opinion from another expert before a big decision
   
 ```bash  
 pip install deepshell
-
+```
 From Source
 
+```bash
 git clone https://github.com/muralipala1504/deepshell.git
-cd deepshell
-pip install -e .
 
+cd deepshell
+
+pip install -e .
+```
 Development Installation
 
+```bash
+
 git clone https://github.com/muralipala1504/deepshell.git
+
 cd deepshell
+
 pip install -e .[dev]
 
+```
 Quick Start
 
 Get your OpenAI API key.
 
 Set your API key:
 
+```bash
 export OPENAI_API_KEY="sk-your-openai-key"
 
+```
 Start using DeepShell with prompts:
+
+```bash
 
 deepshell --provider openai "How do I list all files in a directory?"
 
+```
 Or simply:
+
+```bash
 
 deepshell "How do I list all files in a directory?"
 
+```
+
 Usage Examples
+
 Shell Command Generation
 
+```bash
 deepshell --provider openai --shell "compress all .log files"
+
+```
 Personas (Specialized AI Behaviors)
 
+```bash
+
 deepshell --provider openai --persona shell "optimize this command: find . -name '*.py'"
+
+```
 
 Configuration
 
 DeepShell uses a configuration file at ~/.config/deepshell/.deepshellrc:
 
 # Provider Configuration
+
 PROVIDER=openai
 
 # API Key
+
 OPENAI_API_KEY=sk-your-openai-key
 
 # Model Configuration
+
 DEFAULT_MODEL=gpt-3.5-turbo
 
 # Display Options
+
 PRETTIFY_MARKDOWN=true
 DEFAULT_COLOR=cyan
 CODE_THEME=monokai
 DISABLE_STREAMING=false
 
 # Cache Settings
+
 ENABLE_CACHE=true
 CACHE_LENGTH=100
 CHAT_CACHE_LENGTH=100
 
 # Advanced Options
+
 REQUEST_TIMEOUT=60
 MAX_RETRIES=3
 USE_FUNCTIONS=true
@@ -123,6 +154,7 @@ Basic Commands
 deepshell [OPTIONS] [PROMPT]
 
 Options
+
 Option	Description
 --provider	LLM provider to use (only openai)
 --model, -m	Model to use (see above)
@@ -182,22 +214,33 @@ Connection Issues
 
 Cache Issues
 
+```bash
 rm -rf ~/.cache/deepshell/
+```
 
 Permission Issues
+
+```bash
 chmod 755 ~/.config/deepshell/
+```
 
 Contributing
 
 We welcome contributions! Please see our Contributing Guide for details.
 
+```bash
+
 git clone https://github.com/muralipala1504/deepshell.git
 cd deepshell
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/activate  
 pip install -e .[dev]
 
+```
+
 Running Tests
+
+```bash
 
 pytest
 pytest --cov=deepshell  # With coverage
@@ -205,24 +248,43 @@ black deepshell/
 isort deepshell/
 flake8 deepshell/
 
+```
+
 Docker Usage
+
 Pull the official DeepShell image from Docker Hub
+
+```bash
 
 docker pull moorelee/deepshell:latest
 
+```
+
 Or build the Docker image locally
+
+```bash
 
 docker build -t deepshell:latest .
 
+```
+
 Run DeepShell with an interactive shell
 
+```bash
+
 docker run -it --rm --entrypoint /bin/bash moorelee/deepshell:latest
+
+```
 
 Inside the container shell
 
 Set your OpenAI API key:
 
+```bash
+
 export OPENAI_API_KEY="your_api_key_here"
+
+```
 
 Run DeepShell commands:
 
@@ -230,8 +292,11 @@ deepshell "your prompt here"
 
 Optional: Persist logs or config
 
+```bash
+
 docker run -it --rm -e OPENAI_API_KEY="your_api_key_here" -v /path/on/host:/app/logs moorelee/deepshell:latest "your prompt"
 
+```
 
 License
 
@@ -268,4 +333,5 @@ Thank you for your support! 🙌
 
 DeepShell – Bringing the power of the world’s best LLMs to your command line! 🚀
 Don’t just ask one AI—get a consensus.
+
 
